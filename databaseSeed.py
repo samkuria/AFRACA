@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 NEO4J_URL= os.getenv("NEO4J_URL","neo4j://localhost:7687")
 NEO4J_USER= os.getenv("NEO4J_USER","neo4j")
-NEO4J_PASSWORD= os.getenv("NEO4J_PASSWORD","15SaM373")
+NEO4J_PASSWORD= os.getenv("NEO4J_PASSWORD","******")
 
 class GraphSeeder:
     def __init__(self, uri, user, password):
