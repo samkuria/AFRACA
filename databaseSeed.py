@@ -26,6 +26,25 @@ class GraphSeeder:
             ]
             for query in constraints:
                 session.run(query)
+    def fetch_live_climate_risk(self, lat, lon):
+        try:
+            url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=soil_moisture_0_to_7cm,precipitation"
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            
+            soil_moisture = data.get("current", {}).get("soil_moisture_0_to_7cm", 0.5)
+            
+            if soil_moisture < 0.20:
+                return {"type": "Severe Drought", "score": 0.9}
+            elif soil_moisture < 0.35:
+                return {"type": "Mild Drought", "score": 0.6}
+            else:
+                return {"type": "Optimal Condition", "score": 0.1}
+                
+        except Exception as e:
+            print(f"Open-Meteo API Error: {e}. Defaulting to mock data.")
+            return {"type": "Unknown", "score": 0.5}
     def seed_data(self):
         with self.driver.session() as session:
             print("Seeding Environmental Risks in Regions...")
