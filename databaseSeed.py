@@ -49,12 +49,26 @@ class GraphSeeder:
         with self.driver.session() as session:
             print("Seeding Environmental Risks in Regions...")
 
-            session.run("""
-                         MERGE (r1:Region {id: 'REG-MERU', name: 'Meru County', latitude: 0.0464, longitude: 37.6538})
-                         MERGE (r2:Region {id: 'REG-MACH', name: 'Machakos', latitude: -1.5177, longitude: 37.2634})
+            regions = [
+                {"id": "REG-MERU", "name": "Meru County", "lat": 0.0464, "lon": 37.6538},
+                {"id": "REG-MACH", "name": "Machakos", "lat": -1.5177, "lon": 37.2634}
+            ]
+            
+            for r in regions:
+                session.run("""
+                    MERGE (reg:Region {id: $id})
+                    SET reg.name = $name, reg.latitude = $lat, reg.longitude = $lon
+                """, id=r["id"], name=r["name"], lat=r["lat"], lon=r["lon"])
                 
-                         MERGE (risk1:EnvironmentalRisk {id: 'RSK-01', type: 'Drought', intensityScore: 0.8, detectedDate: '2026-05-01'})
-                         MERGE (r2)-[:EXPOSED_TO{distanceKm: 12.5}]->(risk1)""")
+                print(f"Fetching live climate data from Open-Meteo for {r['name']}...")
+                live_risk = self.fetch_live_climate_risk(r["lat"], r["lon"])
+                
+                session.run("""
+                    MATCH (reg:Region {id: $id})
+                    MERGE (risk:EnvironmentalRisk {id: 'RSK-' + $id})
+                    SET risk.type = $type, risk.intensityScore = $score, risk.detectedDate = date()
+                    MERGE (reg)-[:EXPOSED_TO {distanceKm: 0.0}]->(risk)
+                """, id=r["id"], type=live_risk["type"], score=live_risk["score"])
             
             print("Seeding Chamas, Cooperatives and Agridealers...")
             session.run("""
