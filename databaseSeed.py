@@ -93,20 +93,25 @@ class GraphSeeder:
                 # Amina makes her monthly Chama contribution
                 {"receipt": "QB21MZ9XQ", "type": "PayBill", "amt": 1000, "farmer": "F-101", "target": "CHM-01", "rel": "CONTRIBUTED_TO"}
             ]
-            session.run("""
-                        UNWIND $transaction AS tx
-                        MATCH (f:Farmer {id: tx.farmer})
-                        MERGE(m:MpesaTransaction{receiptNumber: tx.receipt})
-                        SET m.transactionType = tx.type, m.amountKES = tx.amt, m.timestamp = datetime()
-                        
+            for tx in transactions:
+                if tx["rel"] == 'PAID_TO':
+                    session.run("""
+                        MATCH (f:Farmer {id: $farmer})
+                        MATCH (tgt:AgriDealer {id: $target})
+                        MERGE (m:MpesaTransaction {receiptNumber: $receipt})
+                        SET m.transactionType = $type, m.amountKES = $amt, m.timestamp = datetime()
                         MERGE (f)-[:PERFORMED_TX]->(m)
-                        WITH m, tx
-                        CALL apoc.do.case([
-                            tx.rel = 'PAID_TO', 'MATCH (tgt:AgriDealer {id: tx.target}) MERGE (m)-[:PAID_TO]->(tgt) RETURN tgt',
-                            tx.rel = 'CONTRIBUTED_TO', 'MATCH (tgt:Chama {id: tx.target}) MERGE (m)-[:CONTRIBUTED_TO]->(tgt) RETURN tgt'
-                        ], 'RETURN NULL', {m:m, tx:tx}) YIELD value
-                        
-                        RETURN count(*)""", transaction=transactions)
+                        MERGE (m)-[:PAID_TO]->(tgt)
+                    """, farmer=tx["farmer"], target=tx["target"], receipt=tx["receipt"], type=tx["type"], amt=tx["amt"])
+                elif tx["rel"] == 'CONTRIBUTED_TO':
+                    session.run("""
+                        MATCH (f:Farmer {id: $farmer})
+                        MATCH (tgt:Chama {id: $target})
+                        MERGE (m:MpesaTransaction {receiptNumber: $receipt})
+                        SET m.transactionType = $type, m.amountKES = $amt, m.timestamp = datetime()
+                        MERGE (f)-[:PERFORMED_TX]->(m)
+                        MERGE (m)-[:CONTRIBUTED_TO]->(tgt)
+                    """, farmer=tx["farmer"], target=tx["target"], receipt=tx["receipt"], type=tx["type"], amt=tx["amt"])
 
 if __name__=="__main__":
     print("Initializing GraphSeeder...")
