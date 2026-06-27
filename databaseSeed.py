@@ -147,6 +147,30 @@ class GraphSeeder:
                         MERGE (m)-[:CONTRIBUTED_TO]->(tgt)
                     """, farmer=tx["farmer"], target=tx["target"], receipt=tx["receipt"], type=tx["type"], amt=tx["amt"])
 
+    def run_gds_algorithms(self):
+        with self.driver.session() as session:
+            print("Running GDS PageRank for Trust Network...")
+
+            session.run("CALL gds.graph.drop('trustGraph', false)")
+            session.run("""
+                 CALL gds.graph.project(
+                        'trustGraph',
+                        'Farmer',
+                        'GUARANTEES'
+                        )
+                    """)
+            
+            session.run("""
+                        CALL gds.pageRank.write('trustGraph', {
+    
+                            maxIterations: 20,
+                            dampingFactor: 0.85,
+                            writeProperty: 'trust_pagerank'
+                        })""")
+            
+            session.run("CALL gds.graph.drop('trustGraph')")
+            print("Trust scores written to Farmer nodes.")
+
 if __name__=="__main__":
     print("Initializing GraphSeeder...")
     seeder = GraphSeeder(NEO4J_URL, NEO4J_USER, NEO4J_PASSWORD)
