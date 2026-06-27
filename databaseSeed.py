@@ -209,6 +209,28 @@ class GraphSeeder:
             
             session.run("CALL gds.graph.drop('economicGraph')")
             print("Economic footprints successfully written to Farmer nodes.")
+            # Similarity/ KNN
+            print("Running GDS Similarity Algorithm to find Look A-like Borrowers...")
+            session.run("CALL gds.graph.drop('similarityGraph', false)")
+
+            session.run("""
+                        CALL gds.graph.project(
+                            'similarityGraph',
+                            ['Farmer', 'Chama', 'AgriCooperative', 'Region'],
+                            ['MEMBER_OF', 'DELIVERS_TO', 'LOCATED_IN']
+                        )
+                        """)
+            session.run("""
+                        CALL gds.nodeSimilarity.write('similarityGraph', {
+                            writeRelationshipType: 'SIMILAR_TO',
+                            writeProperty: 'score'
+                            similarityCutoff: 0.1,
+                            topK: 5}
+                        )
+                    """)
+            
+            session.run("CALL gds.graph.drop('similarityGraph')")
+            print("Similarity relationships successfully written to the graph.")
 
 
 if __name__=="__main__":
