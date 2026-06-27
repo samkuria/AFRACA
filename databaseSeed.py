@@ -26,6 +26,7 @@ class GraphSeeder:
             ]
             for query in constraints:
                 session.run(query)
+                
     def fetch_live_climate_risk(self, lat, lon):
         try:
             url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=soil_moisture_0_to_7cm,precipitation"
@@ -146,8 +147,8 @@ class GraphSeeder:
                         MERGE (f)-[:PERFORMED_TX]->(m)
                         MERGE (m)-[:CONTRIBUTED_TO]->(tgt)
                     """, farmer=tx["farmer"], target=tx["target"], receipt=tx["receipt"], type=tx["type"], amt=tx["amt"])
-
-    def run_gds_algorithms(self):
+                    
+ def run_gds_algorithms(self):
         with self.driver.session() as session:
             print("Running GDS PageRank for Trust Network...")
 
@@ -170,6 +171,26 @@ class GraphSeeder:
             
             session.run("CALL gds.graph.drop('trustGraph')")
             print("Trust scores written to Farmer nodes.")
+            #Louvain Algorithm
+            print("Running GDS Louvain algorithm for community detection ...")
+
+            session.run("CALL gds.graph.drop('communityGraph', false)")
+
+            session.run("""
+                        CALL gds.graph.project(
+                            'communityGraph',
+                            ['Farmer', 'Chama', 'AgriCooperative'],
+                            ['MEMBER_OF', 'DELIVERS_TO']
+                        )
+                        """)
+            
+            session.run("""
+                        CALL gds.louvain.write('communityGraph',{
+                            writeProperty: 'community_id'
+                        })""")
+            
+            session.run("CALL gds.graph.drop('communityGraph')")
+            print("Community IDs successfully written to nodes.")
 
 if __name__=="__main__":
     print("Initializing GraphSeeder...")
