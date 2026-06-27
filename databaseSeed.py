@@ -217,6 +217,7 @@ if __name__=="__main__":
     try:
         seeder.prepare_database()
         seeder.seed_data()
+        seeder.run_gds_algorithms()
         print("Database seeding completed successfully.")
     except Exception as e:
         print(f"An error occurred during database seeding: {e}")
