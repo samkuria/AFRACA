@@ -191,6 +191,25 @@ class GraphSeeder:
             
             session.run("CALL gds.graph.drop('communityGraph')")
             print("Community IDs successfully written to nodes.")
+            #Degree Centrality
+            print("Running GDS Degree Centrality for economic footprint...")
+            session.run("CALL gds.graph.drop('economicGraph', false)")
+
+            session.run("""
+                        CALL gds.graph.project(
+                            'economicGraph',
+                            ['Farmer', 'MPesaTransaction'],
+                            ['PERFORMED_TX']
+                        )
+                        """)
+            session.run("""
+                        CALL gds.degree.write('economicGraph', {
+                            writeProperty: 'economic_footprint'
+                        })""")
+            
+            session.run("CALL gds.graph.drop('economicGraph')")
+            print("Economic footprints successfully written to Farmer nodes.")
+
 
 if __name__=="__main__":
     print("Initializing GraphSeeder...")
